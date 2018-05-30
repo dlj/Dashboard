@@ -1,0 +1,104 @@
+<html>
+<head></head>
+<style>
+    @keyframes slide-up {
+  from {
+    margin-top: 100px;
+  }
+  to {
+    margin-top: 0px;
+  }
+}
+@keyframes slide-left {
+  from {
+    margin-left: 100px;
+  }
+  to {
+    margin-left: 0px;
+  }
+}
+    body {
+        margin:0px;
+    }
+    #dashboardContainer {
+        width: 100%;
+        height: 80%;        
+        position: relative;
+    }
+    #dragContent {
+        height: 20%;
+        background-color: purple
+    }
+    .wannabewidget {
+        width:10%;
+        height:80%;
+        float:left;
+        margin-top:1%;
+        margin-left: 20px;
+        margin-right: 20px;
+        z-index: 2;
+        position: relative;
+    }
+    #content1 {
+        background-color: greenyellow;
+    }
+    #content2 {
+        background-color: sienna;
+    }
+    #content3 {
+        background-color: lightcoral;
+    }
+    #content4 {
+        background-color: palegreen;
+    }
+    #content5 {
+        background-color: orange;
+    }
+    #content6 {
+        background-color: orangered;
+    }
+
+</style>
+    <body>
+        <canvas id="can" style="position: absolute;z-index:500" width=100% height=80%></canvas>
+        <div id="dashboardContainer"></div>
+        <div id="dragContent">
+
+        </div>
+    </body>
+<script src=https://code.jquery.com/jquery-3.3.1.min.js></script>
+<script src=https://code.jquery.com/ui/1.12.1/jquery-ui.min.js></script>
+<script src="node_modules/systemjs/dist/system.js"></script>
+<script>
+     SystemJS.import('/dashboard.js').then(function (x) {
+         var rows = 4;
+         var columns = 4;
+        var dashboardone = new x.Dashboard({
+        container : $("#dashboardContainer"),
+        rows : rows,
+        columns : columns
+        });
+
+        for (let index = 1; index <= 6; index++) {
+            
+            var div = $("<div id='content" + index + "' class='wannabewidget'></div>");
+            var widget = new x.Widget();
+            widget.id = index; widget.content = "widget " + index; widget.element = div;
+            div.data("widget", widget);
+            $("#dragContent").append(div);
+        }
+
+    var mouseDown = null;
+    $(".wannabewidget").draggable({
+        stop : function(e, ui) {
+            $(e.target).draggable( "destroy" );
+            $(e.target).css({ left : "", top : ""});
+            $(e.target).removeClass("wannabewidget");            
+            dashboardone.place($(e.target).data("widget"), [Math.floor(e.pageX / $("#dashboardContainer").width() * rows), Math.floor(e.pageY / $("#dashboardContainer").height() * columns)], [e.pageX, e.pageY] );
+        }
+    });
+    
+});
+</script>
+
+</html>
