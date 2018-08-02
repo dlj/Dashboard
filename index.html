@@ -70,10 +70,10 @@
 <script src=https://code.jquery.com/ui/1.12.1/jquery-ui.min.js></script>
 <script src="node_modules/systemjs/dist/system.js"></script>
 <script>
-     SystemJS.import('/dashboard.js').then(function (x) {
+     Promise.all([SystemJS.import('source/dashboard.js'), SystemJS.import('source/widget.js')]).then(function (x) {
          var rows = 4;
          var columns = 4;
-        var dashboardone = new x.Dashboard({
+        var dashboardone = new x[0].Dashboard({
         container : $("#dashboardContainer"),
         rows : rows,
         columns : columns
@@ -82,11 +82,17 @@
         for (let index = 1; index <= 6; index++) {
             
             var div = $("<div id='content" + index + "' class='wannabewidget'></div>");
-            var widget = new x.Widget();
+            var widget = new x[1].default();
             widget.id = index; widget.content = "widget " + index; widget.element = div;
             div.data("widget", widget);
             $("#dragContent").append(div);
         }
+
+    $(".dashboardGrid").on("click", function(event) {
+        if ($(event.target).hasClass(".wannabewidget")) {
+            debugger;
+        }
+    });
 
     var mouseDown = null;
     $(".wannabewidget").draggable({
@@ -94,7 +100,7 @@
             $(e.target).draggable( "destroy" );
             $(e.target).css({ left : "", top : ""});
             $(e.target).removeClass("wannabewidget");            
-            dashboardone.place($(e.target).data("widget"), [Math.floor(e.pageX / $("#dashboardContainer").width() * rows), Math.floor(e.pageY / $("#dashboardContainer").height() * columns)], [e.pageX, e.pageY] );
+            dashboardone.place($(e.target).data("widget"), [Math.floor(e.pageY / $("#dashboardContainer").height() * rows), Math.floor(e.pageX / $("#dashboardContainer").width() * columns)], [e.pageX, e.pageY] );
         }
     });
     

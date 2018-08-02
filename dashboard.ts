@@ -1,4 +1,6 @@
+import Widget from './widget'
 export { Dashboard };
+
 
 enum Direction {
     up = 0,
@@ -13,7 +15,7 @@ class DashboardOptions {
     columns : number;
 }
 
-class Cell {
+export class Cell {
     row : number;
     column : number;
     up : Cell;
@@ -32,15 +34,6 @@ class Cell {
         this.left = null;
         this.content = null;
     }
-}
-
-export class Widget 
-{
-    id : number;
-    content : any;
-    element : JQuery;
-    startCell : Cell;
-    endCell : Cell;
 }
 
 class Dashboard {
@@ -62,32 +55,31 @@ class Dashboard {
         $("#can").height($(this.options.container).height());
     }
 
-    generateDOMGrid(rows : number, columns : number) : JQuery {
+    generateDOMGrid(rows: number, columns: number): JQuery {
         this.grid = $("<div>");
         this.grid.addClass("dashboardGrid");
-        this.grid.css({ 
+        this.grid.css({
             "grid-template-columns": "repeat(" + columns + ", 1fr)",
             "grid-template-rows": "repeat(" + rows + ", 1fr)",
             "display": "grid",
             "height": "100%",
             "width": "100%",
-            "position" : "absolute"
-        }
-        );
-        for (let columni = 0; columni < columns; columni++) {
-            for (let rowi = 0; rowi < rows; rowi++) {    
-                if (this.cells[rowi] === undefined)    
-                    this.cells[rowi] = [];                
-                this.cells[rowi][columni] = this.createCell(rowi, columni);   
+            "position": "absolute"
+        });
+        for (let rowi = 0; rowi < rows; rowi++) {
+            for (let columni = 0; columni < columns; columni++) {
+                if (this.cells[rowi] === undefined)
+                    this.cells[rowi] = [];
+                this.cells[rowi][columni] = this.createCell(rowi, columni);
                 var hejdiv = $("<div>");
                 hejdiv.append("<span>" + rowi + "," + columni + "</span>");
-                hejdiv.height( (this.options.container.height() / rows) );
+                hejdiv.height((this.options.container.height() / rows));
                 hejdiv.width((this.options.container.width() / columns) - 13);
-                hejdiv.css({ float : "left", "text-align" : "center", "line-height" : hejdiv.height() + "px", "border" : "1px solid black", "z-index" : 2, "position" : "relative", "box-sizing" : "border-box" });
+                hejdiv.css({ float: "left", "text-align": "center", "line-height": hejdiv.height() + "px", "border": "1px solid black", "z-index": 2, "position": "relative", "box-sizing": "border-box" });
                 $(this.options.container).append(hejdiv);
                 //this.grid.append($("<div class='dashboardCell'>"))             
             }
-        }     
+        }
         return this.grid;
     }
 
@@ -136,14 +128,67 @@ class Dashboard {
             else return null;
     }
 
-    private split(widget : Widget, direction : Direction) : void {
+    private calculateSplit(widget : Widget, direction : Direction) : [[Cell,Cell],[Cell,Cell]] {
         if (widget.startCell !== null && widget.endCell !== null) {
-        // Find the best way to split a widget
-        let rowRemoveStart = widget.startCell.row; 
-        let columnRemoveStart = widget.startCell.column;
-        let rowRemoveEnd = widget.endCell.row;        
-        let columnRemoveEnd = widget.endCell.column;
 
+        // Find the best way to split a widget
+        let widgetStartCell : Cell= widget.startCell;
+        let widgetEndCell : Cell = widget.endCell;
+        let emptyStartCordinates : [number,number] = [widgetStartCell.row, widgetStartCell.column];
+        let emptyEndCordinates : [number,number] = [widgetEndCell.row, widgetEndCell.column];
+
+            switch (direction)
+            {
+                case Direction.up : 
+                widgetStartCell = this.cells[Math.ceil((widget.startCell.row + widget.endCell.row) / 2)][widget.startCell.column];
+                emptyEndCordinates = [widgetStartCell.row-1,widgetEndCell.column];
+                break;
+                case Direction.left :
+                widgetStartCell = this.cells[widget.startCell.row][Math.ceil((widget.endCell.column + widget.startCell.column) / 2)];       
+                emptyEndCordinates = [widgetEndCell.row,widgetStartCell.column - 1];            
+                break;
+                case Direction.down : 
+                widgetEndCell = this.cells[Math.floor((widget.endCell.row + widget.startCell.row)/ 2)][widget.endCell.column];                 
+                emptyStartCordinates = [widgetEndCell.row + 1, widgetStartCell.column];
+                break;
+                case Direction.right : 
+                widgetEndCell = this.cells[widget.endCell.row][Math.floor((widget.startCell.column + widget.endCell.column) / 2)];
+                emptyStartCordinates = [widgetStartCell.row,widgetEndCell.column + 1];
+                break;
+            }
+
+            // No room to place the Widget
+            if ((emptyStartCordinates[0] >= 0 && emptyStartCordinates[0] <= this.options.rows - 1)
+             && (emptyStartCordinates[1] >= 0 && emptyStartCordinates[1] <= this.options.columns - 1)
+             && (emptyEndCordinates[0] >= 0 && emptyEndCordinates[0] <= this.options.rows - 1)
+             && (emptyEndCordinates[1] >= 0 && emptyEndCordinates[1] <= this.options.columns - 1)
+             && (emptyStartCordinates[0] != widgetStartCell.row || emptyStartCordinates[1] != widgetStartCell.column || emptyEndCordinates[0] != widgetEndCell.row || emptyEndCordinates[1] != widgetEndCell.column))
+            {
+                return [[widgetStartCell, widgetEndCell], [this.cells[emptyStartCordinates[0]][emptyStartCordinates[1]], this.cells[emptyEndCordinates[0]][emptyEndCordinates[1]]]];
+            }            
+        }
+        return null;
+    }
+
+    private split(widget : Widget, direction : Direction) : boolean {
+        if (widget.startCell !== null && widget.endCell !== null) {
+
+            var cords = this.calculateSplit(widget,direction);
+            
+            // Could not find a place for the Widget
+            if (cords == null)
+                return false;
+            
+            
+        // Find the best way to split a widget
+        //let rowRemoveStart = widget.endCell.row - cords[1].row ;
+        //let columnRemoveStart = widget.endCell.column- cords[1].column;
+        //let rowRemoveEnd = widget.endCell.row - cords[0].row;        
+        //let columnRemoveEnd = widget.endCell.column - cords[0].column;
+
+        widget.startCell = cords[0][0];
+        widget.endCell = cords[0][1]; 
+     /*       
             switch (direction)
             {
                 case Direction.up : 
@@ -164,9 +209,9 @@ class Dashboard {
                     columnRemoveStart = widget.endCell.column + 1;
                 break;
             }
-
-            for (let rowi = rowRemoveStart; rowi <= rowRemoveEnd; rowi++) {       
-                for (let columni = columnRemoveStart; columni <= columnRemoveEnd; columni++) {
+*/
+            for (let rowi = cords[1][0].row; rowi <= cords[1][1].row; rowi++) {       
+                for (let columni =  cords[1][0].column; columni <=  cords[1][1].column; columni++) {
                     this.cells[rowi][columni].content = null;
                 }
             }
@@ -174,13 +219,14 @@ class Dashboard {
         //    widget.startCell = this.cells[widget.startCell.row - rowStart][widget.startCell.column - columnStart];
       //      widget.endCell = this.cells[widget.endCell.row - rowEnd][widget.endCell.column - columnEnd]
         }
+        return true;
     }
 
     place(content : Widget, placement: Cell | [number, number], entry: [number, number]) : boolean
     {
         if (entry != undefined)
             $(this.options.container).append("<div style='height:30px;width:30px;position:absolute;top:" + entry[1] + ";left:" + entry[0] + ";background-color:red'>");            
-        let sCell = placement instanceof Cell ? placement : this.cells[placement[1]][placement[0]];
+        let sCell = placement instanceof Cell ? placement : this.cells[placement[0]][placement[1]];
 
         if (sCell.content != null) {
             /*
@@ -261,7 +307,10 @@ class Dashboard {
                 dir = Direction.up;
             }
 
-            this.split(sCell.content, dir);
+            var splitResult = this.split(sCell.content, dir);
+
+            if (splitResult == null)
+                return false;
         }
 
         let room = this.findRoom(sCell);
@@ -287,4 +336,13 @@ class Dashboard {
 
         return true;
     }       
+
+    remove(content : Widget) : void {
+        for (let rowi = content.startCell.row; rowi <= content.endCell.row; rowi++) {       
+            for (let columni = content.startCell.column; columni <= content.endCell.column; columni++) {
+                this.cells[rowi][columni].reset();
+            }
+        }
+        content.element.remove();
+    }
 }
